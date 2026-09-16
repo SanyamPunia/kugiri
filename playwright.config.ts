@@ -5,6 +5,9 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // A pass down the page waits for a frame at every step, and a runner can take most of a second
+  // to render one; the replay test makes two passes.
+  timeout: 180_000,
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://localhost:4173",
