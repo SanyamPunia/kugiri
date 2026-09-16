@@ -28,6 +28,21 @@ const GEOMETRY_KNOWN_TO_DRIFT: Record<string, string[]> = {
   webkit: ["first-line"],
 };
 
+/** What each page threw or logged as an error, so a case that never split can say why. */
+const pageErrors = new WeakMap<Page, string[]>();
+
+test.beforeEach(({ page }) => {
+  const errors: string[] = [];
+
+  page.on("pageerror", (error) => errors.push(error.stack ?? error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.push(message.text());
+    }
+  });
+  pageErrors.set(page, errors);
+});
+
 async function expectEveryCaseAsPainted(page: Page, browserName: string) {
   await page.getByRole("button", { name: "Check lines" }).click();
 
@@ -47,7 +62,24 @@ async function expectEveryCaseAsPainted(page: Page, browserName: string) {
       continue;
     }
 
-    expect(status, `${id}: ${result}`).toBe("ok");
+    // A case that never split either never came into view or threw when it did; say which.
+    let detail = "";
+
+    if (status === "pending") {
+      const where = await section
+        .locator("[data-target]")
+        .first()
+        .evaluate((target) => {
+          const rect = target.getBoundingClientRect();
+
+          return `target top ${rect.top.toFixed(0)}, height ${rect.height.toFixed(0)}, scrollY ${window.scrollY.toFixed(0)}, viewport ${window.innerHeight}`;
+        });
+      const errors = pageErrors.get(page) ?? [];
+
+      detail = `\n${where}\npage errors: ${errors.length > 0 ? `\n${errors.join("\n")}` : "none"}`;
+    }
+
+    expect(status, `${id}: ${result}${detail}`).toBe("ok");
   }
 }
 
