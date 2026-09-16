@@ -761,6 +761,10 @@ class Demo {
       }
     }
 
+    // The readout is drawn on any slow frame too, so it says nothing about whether the page is
+    // watching yet. This does: a test scrolls only once it is set, since a target scrolled past
+    // before it is observed is never split.
+    document.documentElement.setAttribute("data-watching", "");
     this.render();
   };
 

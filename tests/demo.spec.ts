@@ -4,7 +4,9 @@ import { expect, type Page, test } from "@playwright/test";
 // compares the split with the lines the browser painted before it, text and geometry.
 
 async function revealEverything(page: Page) {
-  await expect(page.locator("[data-readout]")).not.toHaveText(/targets 0/);
+  // The page watches its targets only once its fonts have loaded, which a cold runner can take a
+  // while to do; a target scrolled past before then is never split.
+  await expect(page.locator("html")).toHaveAttribute("data-watching", "", { timeout: 30_000 });
 
   const height = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
 
