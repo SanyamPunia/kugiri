@@ -10,8 +10,19 @@ async function revealEverything(page: Page) {
 
   const height = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
 
+  // The observer only learns what is in view when the page renders, and a runner can render a few
+  // frames a second: a position scrolled past between two frames is never seen, and the targets
+  // there never split. Each step waits for the next frame, which runs the observer after its
+  // animation frame callbacks, before the next step can scroll on.
   for (let y = 0; y <= height + 600; y += 600) {
-    await page.evaluate((top) => window.scrollTo({ top, behavior: "instant" }), Math.min(y, height));
+    await page.evaluate(
+      (top) =>
+        new Promise((resolve) => {
+          window.scrollTo({ top, behavior: "instant" });
+          requestAnimationFrame(resolve);
+        }),
+      Math.min(y, height)
+    );
     await page.waitForTimeout(120);
   }
 
